@@ -39,6 +39,8 @@ import org.apache.kafka.common.config.ConfigDef.Importance;
 import org.apache.kafka.common.config.ConfigDef.Type;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.ConfigValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
@@ -107,6 +109,8 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
     private static final String MONGODB_VALUE_PROJECTION_TYPE_DOC = "whether or not and which value projection to use";
 
     public static final String MONGODB_VALUE_PROJECTION_LIST_CONF = "mongodb.value.projection.list";
+    public static final String MONGODB_VALUE_INSERT_PROJECTION_LIST_CONF = "mongodb.value_insert.projection.list";
+    public static final String MONGODB_VALUE_UPDATE_PROJECTION_LIST_CONF = "mongodb.value_update.projection.list";
     private static final String MONGODB_VALUE_PROJECTION_LIST_DOC = "comma separated list of field names for value projection";
 
     public static final String MONGODB_DOCUMENT_ID_STRATEGY_CONF = "mongodb.document.id.strategy";
@@ -150,6 +154,8 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
 
     public static final String MONGODB_RATE_LIMITING_EVERY_N = "mongodb.rate.limiting.every.n";
     private static final String MONGODB_RATE_LIMITING_EVERY_N_DOC = "after how many processed batches the rate limit should trigger (NO rate limiting if n=0)";
+
+    private static Logger LOGGER = LoggerFactory.getLogger(MongoDbSinkConnectorConfig.class);
 
     private static ObjectMapper objectMapper = new ObjectMapper();
 
@@ -339,6 +345,18 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         );
     }
 
+    public Set<String> getInsertValueProjectionList(String collection) {
+        return buildProjectionList(getString(MONGODB_VALUE_PROJECTION_TYPE_CONF,collection),
+                getString(MONGODB_VALUE_INSERT_PROJECTION_LIST_CONF,collection)
+        );
+    }
+
+    public Set<String> getUpdateValueProjectionList(String collection) {
+        return buildProjectionList(getString(MONGODB_VALUE_PROJECTION_TYPE_CONF,collection),
+                getString(MONGODB_VALUE_UPDATE_PROJECTION_LIST_CONF,collection)
+        );
+    }
+
     @Deprecated
     public Map<String, String> parseRenameFieldnameMappings() {
         return parseRenameFieldnameMappings("");
@@ -450,10 +468,11 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         postProcessorChains.put(TOPIC_AGNOSTIC_KEY_NAME,buildPostProcessorChain(""));
 
         splitAndTrimAndRemoveConfigListEntries(getString(MONGODB_COLLECTIONS_CONF))
-                .forEach(collection ->
-                        postProcessorChains.put(collection,buildPostProcessorChain(collection))
-                );
-
+                .forEach(collection -> {
+                    LOGGER.debug("(buildPostProcessorChains)collection: {}", collection);
+                    postProcessorChains.put(collection,buildPostProcessorChain(collection));
+                });
+        LOGGER.debug("(buildPostProcessorChains)postProcessorChains: {}", postProcessorChains);
         return postProcessorChains;
 
     }
@@ -495,6 +514,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
     }
 
     private List<String> splitAndTrimAndRemoveConfigListEntries(String entries) {
+        LOGGER.debug("(splitAndTrimAndRemoveConfigListEntries)entries: {}", entries);
         return Arrays.stream(entries.trim().split(FIELD_LIST_SPLIT_EXPR))
                 .filter(s -> !s.isEmpty()).collect(Collectors.toList());
     }
@@ -647,6 +667,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         List<OperationType> supportedOperations = new HashSet<>(
                 splitAndTrimAndRemoveConfigListEntries(getString(MONGODB_CHANGE_DATA_CAPTURE_HANDLER_OPERATIONS,collection))
         ).stream().map(OperationType::fromText).collect(Collectors.toList());
+        LOGGER.debug("(getCdcHandler)supportedOperations: {}", supportedOperations);
 
         try {
             Class<CdcHandler> cdcHandlerClass = (Class<CdcHandler>)Class.forName(cdcHandler);
