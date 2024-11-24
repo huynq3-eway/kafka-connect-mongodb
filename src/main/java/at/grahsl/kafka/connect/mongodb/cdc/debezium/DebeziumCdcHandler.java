@@ -21,6 +21,8 @@ import at.grahsl.kafka.connect.mongodb.cdc.CdcHandler;
 import at.grahsl.kafka.connect.mongodb.cdc.CdcOperation;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,6 +31,8 @@ public abstract class DebeziumCdcHandler extends CdcHandler {
 
     public static final String OPERATION_TYPE_FIELD_PATH = "op";
 
+    private static Logger logger = LoggerFactory.getLogger(DebeziumCdcHandler.class);
+
     private final Map<OperationType,CdcOperation> operations = new HashMap<>();
 
     public DebeziumCdcHandler(MongoDbSinkConnectorConfig config) {
@@ -36,11 +40,13 @@ public abstract class DebeziumCdcHandler extends CdcHandler {
     }
 
     protected void registerOperations(Map<OperationType,CdcOperation> operations) {
+        logger.debug("(registerOperations)operations: {}", operations);
         this.operations.putAll(operations);
     }
 
     public CdcOperation getCdcOperation(BsonDocument doc) {
         try {
+            logger.debug("(getCdcOperation)operations: {}", operations);
             if(!doc.containsKey(OPERATION_TYPE_FIELD_PATH)
                     || !doc.get(OPERATION_TYPE_FIELD_PATH).isString()) {
                 throw new DataException("error: value doc is missing CDC operation type of type string");
@@ -48,6 +54,7 @@ public abstract class DebeziumCdcHandler extends CdcHandler {
             CdcOperation op = operations.get(OperationType.fromText(
                     doc.get(OPERATION_TYPE_FIELD_PATH).asString().getValue())
             );
+            logger.debug("(getCdcOperation)op: {}", op);
             if(op == null) {
                 throw new DataException("error: no CDC operation found in mapping for op="
                         + doc.get(OPERATION_TYPE_FIELD_PATH).asString().getValue());

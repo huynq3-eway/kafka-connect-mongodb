@@ -24,6 +24,8 @@ import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MongoDbInsert implements CdcOperation {
 
@@ -32,9 +34,11 @@ public class MongoDbInsert implements CdcOperation {
     private static final UpdateOptions UPDATE_OPTIONS =
             new UpdateOptions().upsert(true);
 
+    private static Logger logger = LoggerFactory.getLogger(MongoDbInsert.class);
+
     @Override
     public WriteModel<BsonDocument> perform(SinkDocument doc) {
-
+        logger.debug("(perform)doc: {}", doc);
         BsonDocument valueDoc = doc.getValueDoc().orElseThrow(
                 () -> new DataException("error: value doc must not be missing for insert operation")
         );
@@ -43,6 +47,7 @@ public class MongoDbInsert implements CdcOperation {
             BsonDocument insertDoc = BsonDocument.parse(
                     valueDoc.get(JSON_DOC_FIELD_PATH).asString().getValue()
             );
+            logger.debug("(MongoDbInsert.perform)insertDoc: {}", insertDoc);
             return new ReplaceOneModel<>(
                     new BsonDocument(DBCollection.ID_FIELD_NAME,
                             insertDoc.get(DBCollection.ID_FIELD_NAME)),

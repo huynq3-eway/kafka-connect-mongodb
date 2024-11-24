@@ -23,12 +23,16 @@ import com.mongodb.client.model.DeleteOneModel;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MongoDbDelete implements CdcOperation {
 
+    private static Logger logger = LoggerFactory.getLogger(MongoDbDelete.class);
+
     @Override
     public WriteModel<BsonDocument> perform(SinkDocument doc) {
-
+        logger.debug("(MongoDbDelete.perform)doc: {}", doc);
         BsonDocument keyDoc = doc.getKeyDoc().orElseThrow(
                 () -> new DataException("error: key doc must not be missing for delete operation")
         );

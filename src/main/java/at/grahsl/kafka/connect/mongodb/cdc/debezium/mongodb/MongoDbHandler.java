@@ -41,6 +41,7 @@ public class MongoDbHandler extends DebeziumCdcHandler {
 
     public MongoDbHandler(MongoDbSinkConnectorConfig config) {
         super(config);
+        logger.debug("(MongoDbHandler)init with config: {}", config);
         final Map<OperationType,CdcOperation> operations = new HashMap<>();
         operations.put(OperationType.CREATE,new MongoDbInsert());
         operations.put(OperationType.READ,new MongoDbInsert());
@@ -52,6 +53,7 @@ public class MongoDbHandler extends DebeziumCdcHandler {
     public MongoDbHandler(MongoDbSinkConnectorConfig config,
                           Map<OperationType,CdcOperation> operations) {
         super(config);
+        logger.debug("(MongoDbHandler)init with config: {}, and operations: {}", config, operations);
         registerOperations(operations);
     }
 

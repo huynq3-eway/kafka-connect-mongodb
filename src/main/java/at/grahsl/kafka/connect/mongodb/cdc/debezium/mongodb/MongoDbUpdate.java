@@ -25,18 +25,22 @@ import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MongoDbUpdate implements CdcOperation {
 
-    public static final String JSON_DOC_FIELD_PATH = "patch";
+    public static final String JSON_DOC_FIELD_PATH = "after";
     public static final String INTERNAL_OPLOG_FIELD_V = "$v";
 
     private static final UpdateOptions UPDATE_OPTIONS =
             new UpdateOptions().upsert(true);
 
+    private static Logger logger = LoggerFactory.getLogger(MongoDbUpdate.class);
+
     @Override
     public WriteModel<BsonDocument> perform(SinkDocument doc) {
-
+        logger.debug("(MongoDbUpdate.perform)doc: {}", doc);
         BsonDocument valueDoc = doc.getValueDoc().orElseThrow(
                 () -> new DataException("error: value doc must not be missing for update operation")
         );
@@ -58,6 +62,8 @@ public class MongoDbUpdate implements CdcOperation {
                 BsonDocument filterDoc =
                         new BsonDocument(DBCollection.ID_FIELD_NAME,
                                 updateDoc.get(DBCollection.ID_FIELD_NAME));
+                logger.debug("(MongoDbUpdate.perform)filterDoc: {}", filterDoc);
+                logger.debug("(MongoDbUpdate.perform)updateDoc: {}", updateDoc);
                 return new ReplaceOneModel<>(filterDoc, updateDoc, UPDATE_OPTIONS);
             }
 
@@ -71,6 +77,8 @@ public class MongoDbUpdate implements CdcOperation {
                                     ":"+keyDoc.getString(MongoDbHandler.JSON_ID_FIELD_PATH)
                                     .getValue()+"}"
             );
+            logger.debug("(MongoDbUpdate.perform)filterDoc: {}", filterDoc);
+            logger.debug("(MongoDbUpdate.perform)updateDoc: {}", updateDoc);
 
             return new UpdateOneModel<>(filterDoc, updateDoc);
 

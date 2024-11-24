@@ -206,14 +206,18 @@ public class MongoDbSinkTask extends SinkTask {
 
     List<? extends WriteModel<BsonDocument>>
                             buildWriteModel(Collection<SinkRecord> records,String collectionName) {
-
+        LOGGER.debug("(buildWriteModel)collectionName: {}", collectionName);
+        LOGGER.debug("(buildWriteModel)processorChains: {}", processorChains);
         List<WriteModel<BsonDocument>> docsToWrite = new ArrayList<>(records.size());
-        LOGGER.debug("building write model for {} record(s)", records.size());
+        LOGGER.debug("(buildWriteModel)building write model for {} record(s)", records.size());
         records.forEach(record -> {
+                    LOGGER.debug("(buildWriteModel)record: {}", record);
                     SinkDocument doc = sinkConverter.convert(record);
+                    LOGGER.debug("(buildWriteModel)doc before process ==> key: {}, value: {}", doc.getKeyDoc(), doc.getValueDoc());
                     processorChains.getOrDefault(collectionName,
                             processorChains.get(MongoDbSinkConnectorConfig.TOPIC_AGNOSTIC_KEY_NAME))
                     .process(doc, record);
+                    LOGGER.debug("(buildWriteModel)doc after process ==> key: {}, value: {}", doc.getKeyDoc(), doc.getValueDoc());
                     if(doc.getValueDoc().isPresent()) {
                         docsToWrite.add(writeModelStrategies.getOrDefault(
                                 collectionName, writeModelStrategies.get(MongoDbSinkConnectorConfig.TOPIC_AGNOSTIC_KEY_NAME)
@@ -234,6 +238,9 @@ public class MongoDbSinkTask extends SinkTask {
                 }
         );
 
+        docsToWrite.forEach(doc -> {
+            LOGGER.debug("(buildWriteModel)docsToWrite --> doc: {}", doc);
+        });
         return docsToWrite;
     }
 
